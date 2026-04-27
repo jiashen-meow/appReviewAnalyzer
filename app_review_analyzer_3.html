@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App Review Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F5F0;
+    --bg2: #EFECE4;
+    --bg3: #E5E1D6;
+    --surface: #FFFFFF;
+    --border: #D8D4C8;
+    --border2: #E8E4DA;
+    --text: #1A1916;
+    --text2: #5A5750;
+    --text3: #9A9790;
+    --accent: #C45C2A;
+    --accent2: #1D7A5F;
+    --accent3: #4A3FA0;
+    --accent4: #B8760A;
+    --tag-purple-bg: #EEEDFE; --tag-purple-fg: #3C3489;
+    --tag-teal-bg: #E1F5EE; --tag-teal-fg: #085041;
+    --tag-amber-bg: #FAEEDA; --tag-amber-fg: #633806;
+    --tag-coral-bg: #FAECE7; --tag-coral-fg: #4A1B0C;
+    --tag-gray-bg: #F1EFE8; --tag-gray-fg: #444441;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1A1916; --bg2: #211F1B; --bg3: #2A2822;
+      --surface: #252320; --border: #3A3830; --border2: #302E28;
+      --text: #F0EDE6; --text2: #A8A49C; --text3: #6A6860;
+      --accent: #E07048; --accent2: #3DBD94; --accent3: #9B8EF0; --accent4: #E0A030;
+      --tag-purple-bg: #3C3489; --tag-purple-fg: #CECBF6;
+      --tag-teal-bg: #085041; --tag-teal-fg: #9FE1CB;
+      --tag-amber-bg: #633806; --tag-amber-fg: #FAC775;
+      --tag-coral-bg: #4A1B0C; --tag-coral-fg: #F5C4B3;
+      --tag-gray-bg: #444441; --tag-gray-fg: #D3D1C7;
+    }
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── Input screen ── */
+  #input-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .hero-label {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(28px, 5vw, 44px);
+    color: var(--text);
+    text-align: center;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text3);
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+  }
+
+  .input-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--text3); }
+
+  .btn-analyze {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn-analyze:hover { opacity: 0.85; }
+  .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .hint {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 10px;
+  }
+  .hint a { color: var(--accent); text-decoration: none; }
+
+  /* ── Loading ── */
+  #loading-screen {
+    display: none;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    padding: 40px;
+  }
+
+  .spinner {
+    width: 36px; height: 36px;
+    border: 2.5px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-msg {
+    font-size: 14px;
+    color: var(--text2);
+    text-align: center;
+    max-width: 320px;
+  }
+
+  /* ── Report ── */
+  #report-screen {
+    display: none;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  .report-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .app-icon {
+    width: 56px; height: 56px;
+    border-radius: 13px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--border2);
+  }
+
+  .app-meta-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .app-meta-dev {
+    font-size: 13px;
+    color: var(--text3);
+    margin-top: 3px;
+  }
+
+  .btn-reset {
+    margin-left: auto;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text2);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .btn-reset:hover { background: var(--bg3); }
+
+  /* ── Report sections (matching Bear style) ── */
+  .section { margin-bottom: 2rem; }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 560px) {
+    .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .metric {
+    background: var(--bg2);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .metric-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .metric-value { font-size: 22px; font-weight: 500; color: var(--text); }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .user-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .user-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+    margin-right: 6px;
+    margin-bottom: 4px;
+  }
+  .tag-purple { background: var(--tag-purple-bg); color: var(--tag-purple-fg); }
+  .tag-teal   { background: var(--tag-teal-bg);   color: var(--tag-teal-fg);   }
+  .tag-amber  { background: var(--tag-amber-bg);  color: var(--tag-amber-fg);  }
+  .tag-coral  { background: var(--tag-coral-bg);  color: var(--tag-coral-fg);  }
+  .tag-gray   { background: var(--tag-gray-bg);   color: var(--tag-gray-fg);   }
+
+  .user-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .user-desc { font-size: 13px; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+  .quote {
+    font-size: 12px; color: var(--text3); font-style: italic;
+    margin-top: 6px; border-left: 2px solid var(--border);
+    padding-left: 8px;
+  }
+
+  .pain-item { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; font-size: 13px; color: var(--text2); }
+  .pain-bar-wrap { flex: 1; background: var(--bg2); border-radius: 4px; height: 6px; margin-top: 6px; }
+  .pain-bar { height: 6px; border-radius: 4px; }
+  .pain-label { min-width: 160px; color: var(--text); font-size: 13px; }
+  .pain-count { min-width: 28px; text-align: right; color: var(--text3); font-size: 12px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .two-col { grid-template-columns: 1fr; } }
+
+  .insight-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .insight-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+  .insight-item { font-size: 12px; color: var(--text2); margin-bottom: 5px; display: flex; gap: 6px; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+
+  .loves-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .error-msg {
+    background: var(--tag-coral-bg);
+    color: var(--tag-coral-fg);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- INPUT -->
+<div id="input-screen">
+  <div class="hero-label">App Review Analyzer</div>
+  <p class="hero-sub">Paste an App Store ID to generate a user insight report<br><span style="font-size:12px;color:var(--text3);">Requires proxy running locally — see README</span></p>
+  <div class="input-card">
+    <div class="input-label">Anthropic API Key</div>
+    <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="width:100%; margin-bottom:16px;" />
+    <div class="input-label">Apple App Store ID</div>
+    <div class="input-row">
+      <input type="text" id="app-id-input" placeholder="e.g. 1234567890" />
+      <button class="btn-analyze" id="analyze-btn" onclick="startAnalysis()">Analyze</button>
+    </div>
+    <p class="hint">App Store URL: apps.apple.com/app/id<strong>XXXXXXXX</strong> &nbsp;&middot;&nbsp; API key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+    <div id="input-error" class="error-msg" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loading-msg">Fetching app data…</div>
+</div>
+
+<!-- REPORT -->
+<div id="report-screen">
+  <div class="report-header">
+    <img class="app-icon" id="r-icon" src="" alt="" />
+    <div>
+      <div class="app-meta-name" id="r-name"></div>
+      <div class="app-meta-dev" id="r-dev"></div>
+    </div>
+    <button class="btn-reset" onclick="reset()">← New search</button>
+  </div>
+  <div id="report-body"></div>
+</div>
+
+<script>
+const LOADING_MSGS = [
+  "Fetching app data…",
+  "Pulling reviews from the App Store…",
+  "Sending to Claude for analysis…",
+  "Structuring the report…"
+];
+
+let loadingInterval;
+
+function show(id) {
+  ['input-screen','loading-screen','report-screen'].forEach(s => {
+    document.getElementById(s).style.display = 'none';
+  });
+  const el = document.getElementById(id);
+  el.style.display = id === 'loading-screen' ? 'flex' : 'block';
+}
+
+function setLoadingMsg(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+}
+
+function cycleLoadingMsgs() {
+  let i = 0;
+  setLoadingMsg(LOADING_MSGS[i]);
+  loadingInterval = setInterval(() => {
+    i = (i + 1) % LOADING_MSGS.length;
+    setLoadingMsg(LOADING_MSGS[i]);
+  }, 3000);
+}
+
+function stopLoadingCycle() {
+  clearInterval(loadingInterval);
+}
+
+function reset() {
+  show('input-screen');
+  document.getElementById('app-id-input').value = '';
+  document.getElementById('input-error').style.display = 'none';
+  document.getElementById('report-body').innerHTML = '';
+}
+
+async function startAnalysis() {
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  if (!apiKey || !apiKey.startsWith('sk-')) {
+    const err = document.getElementById('input-error');
+    err.textContent = 'Please enter a valid Anthropic API key (starts with sk-ant-...).';
+    err.style.display = 'block';
+    return;
+  }
+  const rawId = document.getElementById('app-id-input').value.trim();
+  // Extract numeric ID
+  const match = rawId.match(/\d{7,12}/);
+  if (!match) {
+    const err = document.getElementById('input-error');
+    err.textContent = 'Please enter a valid App Store ID (7–12 digit number).';
+    err.style.display = 'block';
+    return;
+  }
+  const appId = match[0];
+  document.getElementById('input-error').style.display = 'none';
+  document.getElementById('analyze-btn').disabled = true;
+
+  show('loading-screen');
+  cycleLoadingMsgs();
+
+  try {
+    // Single Claude call with web_search — fetches app info + reviews itself, no CORS issues
+    setLoadingMsg('Asking Claude to research the app…');
+
+    const prompt = `You are a product research analyst. Look up the Apple App Store app with ID "${appId}" (US store).
+
+Use web search to:
+1. Find the app name, developer, icon URL, current rating, and genre
+2. Find and read recent App Store reviews (search for "[app name] app store reviews site:apps.apple.com" or similar)
+3. Gather at least 20–30 distinct user reviews or review excerpts
+
+Then produce a JSON analysis with EXACTLY this schema (no markdown, no extra keys):
+{
+  "appName": "<app name>",
+  "developer": "<developer name>",
+  "iconUrl": "<icon image URL if found, else empty string>",
+  "metrics": {
+    "reviewsAnalyzed": <number of reviews you found>,
+    "avgRating": "<e.g. '4.2 ★'>",
+    "avgRatingSub": "<e.g. '32 five-star reviews'>",
+    "dailyUsers": "<e.g. '~60%'>",
+    "dailyUsersSub": "<e.g. 'Mention daily use'>",
+    "longTermUsers": "<e.g. '~40%'>",
+    "longTermUsersSub": "<e.g. 'Used app for years'>",
+    "dateRange": "<date range of reviews, e.g. 'Oct 2025 – Mar 2026'>"
+  },
+  "userSegments": [
+    {
+      "tagLabel": "<segment name>",
+      "tagColor": "<one of: purple|teal|amber|coral>",
+      "percentage": "<e.g. '~25%'>",
+      "name": "<subtitle with specific roles>",
+      "description": "<2–3 sentences about how this segment uses the app>",
+      "quote": "<short paraphrased quote from a review, under 15 words>"
+    }
+  ],
+  "usageSituations": {
+    "when": ["<usage situation>"],
+    "devices": ["<device or context>"]
+  },
+  "painPoints": [
+    { "label": "<pain point>", "count": "<e.g. '5+'>", "severity": "<high|medium|low>" }
+  ],
+  "loves": ["<theme users love>"]
+}
+
+Requirements:
+- userSegments: 3–5 segments based on actual review patterns
+- painPoints: 5–8 items ordered by frequency descending
+- loves: 8–12 themes
+- Be specific to this app's actual reviews, not generic
+- Output ONLY the JSON object, nothing else`;
+
+    const claudeRes = await fetch('http://localhost:7825/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const claudeJson = await claudeRes.json();
+    if (claudeJson.error) throw new Error(claudeJson.error.message || 'Claude API error');
+
+    const rawText = (claudeJson.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('');
+
+    const cleaned = rawText.replace(/```json|```/g, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse analysis. Please try again.');
+    const analysis = JSON.parse(jsonMatch[0]);
+
+    stopLoadingCycle();
+
+    // Render report header
+    document.getElementById('r-icon').src = analysis.iconUrl || '';
+    document.getElementById('r-icon').style.display = analysis.iconUrl ? 'block' : 'none';
+    document.getElementById('r-name').textContent = analysis.appName || 'App';
+    document.getElementById('r-dev').textContent = analysis.developer || '';
+
+    document.getElementById('report-body').innerHTML = buildReport(analysis);
+    show('report-screen');
+
+  } catch (err) {
+    stopLoadingCycle();
+    show('input-screen');
+    const errEl = document.getElementById('input-error');
+    errEl.textContent = err.message || 'Something went wrong. Please try again.';
+    errEl.style.display = 'block';
+    console.error(err);
+  } finally {
+    document.getElementById('analyze-btn').disabled = false;
+  }
+}
+
+function buildReport(d) {
+  const m = d.metrics;
+  const colorMap = { high: '#D85A30', medium: '#BA7517', low: '#888780' };
+  const widthMap = { high: 80, medium: 55, low: 25 };
+  const segColors = ['purple','teal','amber','coral','gray'];
+
+  // Pain point max for bar width
+  const parseMentions = s => parseInt((s || '0').replace(/\D/g,'')) || 1;
+  const maxCount = Math.max(...(d.painPoints || []).map(p => parseMentions(p.count)));
+
+  return `
+  <div class="section">
+    <div class="metric-grid">
+      <div class="metric">
+        <div class="metric-label">Reviews analyzed</div>
+        <div class="metric-value">${m.reviewsAnalyzed}</div>
+        <div class="metric-sub">${m.dateRange || ''}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Avg rating</div>
+        <div class="metric-value">${m.avgRating}</div>
+        <div class="metric-sub">${m.avgRatingSub || ''}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Daily users</div>
+        <div class="metric-value">${m.dailyUsers}</div>
+        <div class="metric-sub">${m.dailyUsersSub || ''}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Long-term users</div>
+        <div class="metric-value">${m.longTermUsers}</div>
+        <div class="metric-sub">${m.longTermUsersSub || ''}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Who uses ${m.appName || 'this app'}</div>
+    ${(d.userSegments || []).map((seg, i) => `
+    <div class="user-card">
+      <div>
+        <span class="user-tag tag-${seg.tagColor || segColors[i % segColors.length]}">${seg.tagLabel}</span>
+        <span class="user-tag tag-gray">${seg.percentage}</span>
+      </div>
+      <div class="user-name">${seg.name}</div>
+      <div class="user-desc">${seg.description}</div>
+      ${seg.quote ? `<div class="quote">"${seg.quote}"</div>` : ''}
+    </div>`).join('')}
+  </div>
+
+  <div class="section">
+    <div class="section-title">Usage frequency & situations</div>
+    <div class="two-col">
+      <div class="insight-card">
+        <div class="insight-title">When they use it</div>
+        ${(d.usageSituations?.when || []).map(item => `
+        <div class="insight-item"><span class="dot" style="background:#7F77DD"></span>${item}</div>`).join('')}
+      </div>
+      <div class="insight-card">
+        <div class="insight-title">Devices & context</div>
+        ${(d.usageSituations?.devices || []).map(item => `
+        <div class="insight-item"><span class="dot" style="background:#1D9E75"></span>${item}</div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Top pain points (by mention frequency)</div>
+    <div style="margin-top: 8px;">
+      ${(d.painPoints || []).map(p => {
+        const cnt = parseMentions(p.count);
+        const w = Math.round((cnt / maxCount) * 85) + 10;
+        const col = p.severity === 'high' ? '#D85A30' : p.severity === 'medium' ? '#BA7517' : '#888780';
+        return `
+      <div class="pain-item">
+        <div class="pain-label">${p.label}</div>
+        <div class="pain-bar-wrap"><div class="pain-bar" style="width:${w}%; background:${col};"></div></div>
+        <div class="pain-count">${p.count}</div>
+      </div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">What they love (top themes)</div>
+    <div class="loves-wrap">
+      ${(d.loves || []).map((love, i) => {
+        const colors = ['tag-purple','tag-teal','tag-teal','tag-purple','tag-amber','tag-teal','tag-amber','tag-purple','tag-gray','tag-gray','tag-coral','tag-teal'];
+        return `<span class="user-tag ${colors[i % colors.length]}">${love}</span>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+// Allow Enter key
+document.getElementById('app-id-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startAnalysis();
+});
+</script>
+</body>
+</html>
